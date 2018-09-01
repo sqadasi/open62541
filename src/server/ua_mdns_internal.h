@@ -12,6 +12,8 @@
 
 _UA_BEGIN_DECLS
 
+#include "ua_config.h"
+
 #ifdef UA_ENABLE_DISCOVERY_MULTICAST
 
 #include "mdnsd/libmdnsd/mdnsd.h"
