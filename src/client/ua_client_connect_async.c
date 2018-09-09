@@ -468,6 +468,27 @@ responseGetEndpoints(UA_Client *client, void *userdata, UA_UInt32 requestId,
     requestSession(client, &requestId);
 }
 
+/* Receive and process messages until a synchronous message arrives or the
+ * timout finishes */
+UA_StatusCode
+receivePacketAsync(UA_Client *client) {
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    if(UA_Client_getState(client) == UA_CLIENTSTATE_DISCONNECTED ||
+        UA_Client_getState(client) == UA_CLIENTSTATE_WAITING_FOR_ACK) {
+        retval = UA_Connection_receiveChunksNonBlocking(&client->connection, client,
+                                                        processACKResponseAsync);
+    } else if(UA_Client_getState(client) == UA_CLIENTSTATE_CONNECTED) {
+        retval = UA_Connection_receiveChunksNonBlocking(&client->connection, client,
+                                                        processOPNResponse);
+    } if(retval != UA_STATUSCODE_GOOD &&
+         retval != UA_STATUSCODE_GOODNONCRITICALTIMEOUT) {
+        if(retval == UA_STATUSCODE_BADCONNECTIONCLOSED)
+            setClientState(client, UA_CLIENTSTATE_DISCONNECTED);
+        UA_Client_disconnect(client);
+    }
+    return retval;
+}
+
 static UA_StatusCode
 requestGetEndpoints(UA_Client *client, UA_UInt32 *requestId) {
     UA_GetEndpointsRequest request;
@@ -545,8 +566,6 @@ UA_Client_connectInternalAsync(UA_Client *client, const char *endpointUrl,
     UA_ChannelSecurityToken_init(&client->channel.securityToken);
     client->channel.state = UA_SECURECHANNELSTATE_FRESH;
     /* Set up further callback function to handle secure channel and session establishment  */
-    client->ackResponseCallback = processACKResponseAsync;
-    client->openSecureChannelResponseCallback = processOPNResponse;
     client->endpointsHandshake = endpointsHandshake;
 
     UA_StatusCode retval = UA_STATUSCODE_GOOD;

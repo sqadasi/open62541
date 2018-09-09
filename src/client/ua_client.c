@@ -532,27 +532,6 @@ receiveServiceResponseAsync(UA_Client *client, void *response,
     return retval;
 }
 
-UA_StatusCode
-receivePacketAsync(UA_Client *client) {
-    UA_StatusCode retval = UA_STATUSCODE_GOOD;
-    if (UA_Client_getState(client) == UA_CLIENTSTATE_DISCONNECTED ||
-            UA_Client_getState(client) == UA_CLIENTSTATE_WAITING_FOR_ACK) {
-        retval = UA_Connection_receiveChunksNonBlocking(
-                &client->connection, client, client->ackResponseCallback);
-    }
-    else if(UA_Client_getState(client) == UA_CLIENTSTATE_CONNECTED) {
-        retval = UA_Connection_receiveChunksNonBlocking(
-                &client->connection, client,
-                client->openSecureChannelResponseCallback);
-    }
-    if(retval != UA_STATUSCODE_GOOD && retval != UA_STATUSCODE_GOODNONCRITICALTIMEOUT) {
-        if(retval == UA_STATUSCODE_BADCONNECTIONCLOSED)
-            setClientState(client, UA_CLIENTSTATE_DISCONNECTED);
-        UA_Client_disconnect(client);
-    }
-    return retval;
-}
-
 void
 UA_Client_AsyncService_cancel(UA_Client *client, AsyncServiceCall *ac,
                               UA_StatusCode statusCode) {

@@ -157,8 +157,6 @@ struct UA_Client {
     UA_NodeId authenticationToken;
     UA_UInt32 requestHandle;
     /* Connection Establishment (async) */
-    UA_Connection_processChunk ackResponseCallback;
-    UA_Connection_processChunk openSecureChannelResponseCallback;
     UA_Boolean endpointsHandshake;
 
     /* Async Service */
