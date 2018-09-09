@@ -223,10 +223,12 @@ processOPNResponse(void *application, UA_Connection *connection,
 
     /* Following requests and responses */
     UA_UInt32 reqId;
-    if(client->endpointsHandshake)
+    if(client->endpointsHandshake) {
         retval = requestGetEndpoints (client, &reqId);
-    else
+        client->endpointsHandshake = false;
+    } else {
         retval = requestSession (client, &reqId);
+    }
 
     if(retval != UA_STATUSCODE_GOOD)
         goto error;
