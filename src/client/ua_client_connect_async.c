@@ -559,14 +559,13 @@ requestSession(UA_Client *client, UA_UInt32 *requestId) {
 static UA_StatusCode
 UA_Client_connectInternalAsync(UA_Client *client, const char *endpointUrl,
                                UA_ClientAsyncServiceCallback callback,
-                               void *userdata, UA_Boolean endpointsHandshake,
-                               UA_Boolean createNewSession) {
+                               void *userdata) {
     if(client->state >= UA_CLIENTSTATE_WAITING_FOR_ACK)
         return UA_STATUSCODE_GOOD;
     UA_ChannelSecurityToken_init(&client->channel.securityToken);
     client->channel.state = UA_SECURECHANNELSTATE_FRESH;
     /* Set up further callback function to handle secure channel and session establishment  */
-    client->endpointsHandshake = endpointsHandshake;
+    client->endpointsHandshake = true;
 
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     client->connection = client->config.initConnectionFunc(
@@ -654,8 +653,7 @@ UA_StatusCode
 UA_Client_connect_async(UA_Client *client, const char *endpointUrl,
                         UA_ClientAsyncServiceCallback callback,
                         void *userdata) {
-    return UA_Client_connectInternalAsync(client, endpointUrl, callback,
-            userdata, UA_TRUE, UA_TRUE);
+    return UA_Client_connectInternalAsync(client, endpointUrl, callback, userdata);
 }
 
 /* Async disconnection */
