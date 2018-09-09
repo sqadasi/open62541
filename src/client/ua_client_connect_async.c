@@ -556,7 +556,7 @@ requestSession(UA_Client *client, UA_UInt32 *requestId) {
     return client->connectStatus;
 }
 
-UA_StatusCode
+static UA_StatusCode
 UA_Client_connectInternalAsync(UA_Client *client, const char *endpointUrl,
                                UA_ClientAsyncServiceCallback callback,
                                void *userdata, UA_Boolean endpointsHandshake,
