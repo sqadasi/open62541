@@ -572,22 +572,22 @@ ClientNetworkLayerTCP_free(UA_Connection *connection) {
 }
 
 UA_StatusCode UA_ClientConnectionTCP_poll(UA_Client *client, void *data) {
+    /* Already connected */
     UA_Connection *connection = (UA_Connection*) data;
+    if(connection->state >= UA_CONNECTION_OPENING) {
+        UA_Client_removeRepeatedCallback(client, connection->connectCallbackID);
+        connection->connectCallbackID = 0;
+        return UA_STATUSCODE_GOOD;
+    }
 
-    if (connection->state == UA_CONNECTION_CLOSED)
-        return UA_STATUSCODE_BADDISCONNECT;
-
-    TCPClientConnection *tcpConnection =
-                    (TCPClientConnection*) connection->handle;
+    /* Not initialized? */
+    TCPClientConnection *tcpConnection = (TCPClientConnection*)connection->handle;
+    if(!tcpConnection)
+        return UA_STATUSCODE_BADINTERNALERROR;
 
     UA_DateTime connStart = UA_DateTime_nowMonotonic();
     UA_SOCKET clientsockfd;
 
-    if (connection->state == UA_CONNECTION_ESTABLISHED) {
-            UA_Client_removeRepeatedCallback(client, connection->connectCallbackID);
-            connection->connectCallbackID = 0;
-            return UA_STATUSCODE_GOOD;
-    }
     if ((UA_Double) (UA_DateTime_nowMonotonic() - tcpConnection->connStart)
                     > tcpConnection->timeout* UA_DATETIME_MSEC ) {
             // connection timeout
@@ -597,8 +597,9 @@ UA_StatusCode UA_ClientConnectionTCP_poll(UA_Client *client, void *data) {
             return UA_STATUSCODE_BADDISCONNECT;
 
     }
-    /* On linux connect may immediately return with ECONNREFUSED but we still want to try to connect */
-    /* Thus use a loop and retry until timeout is reached */
+    /* On linux connect may immediately return with ECONNREFUSED but we still
+     * want to try to connect Thus use a loop and retry until timeout is
+     * reached */
 
     /* Get a socket */
     clientsockfd = UA_socket(tcpConnection->server->ai_family,
@@ -607,29 +608,29 @@ UA_StatusCode UA_ClientConnectionTCP_poll(UA_Client *client, void *data) {
     connection->sockfd = (UA_Int32) clientsockfd; /* cast for win32 */
 
     if(clientsockfd == UA_INVALID_SOCKET) {
-            UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_NETWORK,
-                            "Could not create client socket: %s", strerror(UA_ERRNO));
-            ClientNetworkLayerTCP_close(connection);
-            return UA_STATUSCODE_BADDISCONNECT;
+        UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_NETWORK,
+                       "Could not create client socket: %s", strerror(UA_ERRNO));
+        ClientNetworkLayerTCP_close(connection);
+        return UA_STATUSCODE_BADDISCONNECT;
     }
 
     /* Non blocking connect to be able to timeout */
-    if (UA_socket_set_nonblocking(clientsockfd) != UA_STATUSCODE_GOOD) {
-            UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_NETWORK,
-                            "Could not set the client socket to nonblocking");
-            ClientNetworkLayerTCP_close(connection);
-            return UA_STATUSCODE_BADDISCONNECT;
+    if(UA_socket_set_nonblocking(clientsockfd) != UA_STATUSCODE_GOOD) {
+        UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_NETWORK,
+                       "Could not set the client socket to nonblocking");
+        ClientNetworkLayerTCP_close(connection);
+        return UA_STATUSCODE_BADDISCONNECT;
     }
 
     /* Non blocking connect */
     int error = UA_connect(clientsockfd, tcpConnection->server->ai_addr,
                     tcpConnection->server->ai_addrlen);
 
-    if ((error == -1) && (UA_ERRNO != UA_ERR_CONNECTION_PROGRESS)) {
-            ClientNetworkLayerTCP_close(connection);
-            UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_NETWORK,
-                            "Connection to  failed with error: %s", strerror(UA_ERRNO));
-            return UA_STATUSCODE_BADDISCONNECT;
+    if((error == -1) && (UA_ERRNO != UA_ERR_CONNECTION_PROGRESS)) {
+        ClientNetworkLayerTCP_close(connection);
+        UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_NETWORK,
+                       "Connection to  failed with error: %s", strerror(UA_ERRNO));
+        return UA_STATUSCODE_BADDISCONNECT;
     }
 
     /* Use select to wait and check if connected */
@@ -703,13 +704,13 @@ UA_StatusCode UA_ClientConnectionTCP_poll(UA_Client *client, void *data) {
                  * timeout is somehow wrong */
 
         } else {
-                connection->state = UA_CONNECTION_ESTABLISHED;
+                connection->state = UA_CONNECTION_OPENING;
                 return UA_STATUSCODE_GOOD;
             }
 #endif
         }
     } else {
-        connection->state = UA_CONNECTION_ESTABLISHED;
+        connection->state = UA_CONNECTION_OPENING;
         return UA_STATUSCODE_GOOD;
     }
 

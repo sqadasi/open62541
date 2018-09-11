@@ -65,8 +65,7 @@ START_TEST(Client_connect_async){
     UA_StatusCode retval;
     UA_Client *client = UA_Client_new(UA_ClientConfig_default);
     UA_Boolean connected = false;
-    UA_Client_connect_async(client, "opc.tcp://localhost:4840", onConnect,
-                            &connected);
+    UA_Client_connect_async(client, "opc.tcp://localhost:4840", onConnect, &connected);
     /*Windows needs time to response*/
     UA_sleep_ms(100);
     UA_UInt32 reqId = 0;

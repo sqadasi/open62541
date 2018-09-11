@@ -55,6 +55,9 @@ processACKResponseAsync(void *application, UA_Connection *connection,
                          UA_ByteString *chunk) {
     UA_Client *client = (UA_Client*)application;
 
+    UA_LOG_DEBUG(client->config.logger, UA_LOGCATEGORY_CLIENT,
+                 "Process Async ACK response");
+
     /* Decode the message */
     size_t offset = 0;
     UA_TcpMessageHeader messageHeader;
@@ -86,11 +89,13 @@ processACKResponseAsync(void *application, UA_Connection *connection,
 
 static UA_StatusCode
 sendHELMessage(UA_Client *client) {
+    UA_LOG_DEBUG(client->config.logger, UA_LOGCATEGORY_CLIENT,
+                 "Sending HEL message");
+
     /* Get a buffer */
     UA_ByteString message;
     UA_Connection *conn = &client->connection;
-    client->connectStatus = conn->getSendBuffer(conn, UA_MINMESSAGESIZE,
-                                                &message);
+    client->connectStatus = conn->getSendBuffer(conn, UA_MINMESSAGESIZE, &message);
 
     if (client->connectStatus != UA_STATUSCODE_GOOD)
         return client->connectStatus;
@@ -108,14 +113,10 @@ sendHELMessage(UA_Client *client) {
 
     /* Encode the message header at offset 0 */
     UA_TcpMessageHeader messageHeader;
-    messageHeader.messageTypeAndChunkType = UA_CHUNKTYPE_FINAL
-            + UA_MESSAGETYPE_HEL;
-    messageHeader.messageSize = (UA_UInt32) ((uintptr_t)bufPos
-            - (uintptr_t)message.data);
+    messageHeader.messageTypeAndChunkType = UA_CHUNKTYPE_FINAL + UA_MESSAGETYPE_HEL;
+    messageHeader.messageSize = (UA_UInt32) ((uintptr_t)bufPos - (uintptr_t)message.data);
     bufPos = message.data;
-    client->connectStatus |= UA_TcpMessageHeader_encodeBinary(&messageHeader,
-                                                              &bufPos,
-                                                              bufEnd);
+    client->connectStatus |= UA_TcpMessageHeader_encodeBinary(&messageHeader, &bufPos, bufEnd);
     if (client->connectStatus != UA_STATUSCODE_GOOD) {
         conn->releaseSendBuffer(conn, &message);
         return client->connectStatus;
@@ -138,11 +139,14 @@ sendHELMessage(UA_Client *client) {
 
 static void
 processDecodedOPNResponseAsync(void *application, UA_SecureChannel *channel,
-                                UA_MessageType messageType,
-                                UA_UInt32 requestId,
+                                UA_MessageType messageType, UA_UInt32 requestId,
                                 const UA_ByteString *message) {
     /* Does the request id match? */
     UA_Client *client = (UA_Client*)application;
+
+    UA_LOG_DEBUG(client->config.logger, UA_LOGCATEGORY_CLIENT,
+                 "Process OPN response");
+
     if(requestId != client->requestId) {
         UA_Client_disconnect(client);
         return;
@@ -506,7 +510,6 @@ requestGetEndpoints(UA_Client *client, UA_UInt32 *requestId) {
             &UA_TYPES[UA_TYPES_GETENDPOINTSRESPONSE], NULL, requestId);
     UA_GetEndpointsRequest_deleteMembers(&request);
     return client->connectStatus;
-
 }
 
 static void
@@ -636,10 +639,11 @@ UA_Client_connectInternalAsync(UA_Client *client, const char *endpointUrl,
 
 UA_StatusCode
 UA_Client_connect_iterate(UA_Client *client) {
-    if (client->connection.state == UA_CONNECTION_ESTABLISHED){
-        if (client->state < UA_CLIENTSTATE_WAITING_FOR_ACK)
-            return sendHELMessage(client);
-    }
+    UA_LOG_TRACE(client->config.logger, UA_LOGCATEGORY_CLIENT,
+                 "Connect iterate");
+    if(client->connection.state == UA_CONNECTION_OPENING &&
+       client->state < UA_CLIENTSTATE_WAITING_FOR_ACK)
+        return sendHELMessage(client);
 
     /* If server is not connected */
     if (client->connection.state == UA_CONNECTION_CLOSED) {
