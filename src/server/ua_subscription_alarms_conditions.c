@@ -117,10 +117,7 @@
 /* Global Variables                                                          */
 /*****************************************************************************/
 
-static UA_NodeId refreshEvents[2] = {
-                                          {0, UA_NODEIDTYPE_NUMERIC, {0}},
-                                          {0, UA_NODEIDTYPE_NUMERIC, {0}}
-                                      };
+static UA_NodeId refreshEvents[2] = {UA_NODEID_NULL, UA_NODEID_NULL};
 /*****************************************************************************/
 /* Callbacks                                                                 */
 /*****************************************************************************/
