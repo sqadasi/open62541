@@ -1510,7 +1510,7 @@ static UA_StatusCode
 createRefreshMethodEvents(UA_Server *server, UA_NodeId *outRefreshStartNodId, UA_NodeId *outRefreshEndNodId) {
     UA_NodeId refreshStartEventTypeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHSTARTEVENTTYPE);
     UA_NodeId refreshEndEventTypeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHENDEVENTTYPE);
-    /* create RefreshStartEvent TODO those ReferenceTypes should not be Abstract */
+    /* create RefreshStartEvent */
     UA_StatusCode retval = UA_Server_createEvent(server, refreshStartEventTypeNodeId, outRefreshStartNodId);
     CONDITION_ASSERT_RETURN_RETVAL(retval, "CreateEvent RefreshStart failed",);
 
